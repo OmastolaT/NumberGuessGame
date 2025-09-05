@@ -2,12 +2,13 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven-3.9.11'   // the name you configured in Jenkins
-        jdk 'Java-17'          // the name you configured in Jenkins
+        maven 'Maven3'
+        jdk 'JDK17'
     }
 
     environment {
         DEPLOY_DIR = "/opt/tomcat10/webapps"
+        WAR_FILE   = "target/NumberGuessGame-1.0-SNAPSHOT.war"
     }
 
     stages {
@@ -26,20 +27,23 @@ pipeline {
         stage('Deploy to Tomcat') {
             steps {
                 script {
-                   sh '''
-                    rm -rf $DEPLOY_DIR/NumberGuessGame*
-                    cp $WAR_FILE $DEPLOY_DIR/
-                '''
+                    sh '''
+                        rm -rf $DEPLOY_DIR/NumberGuessGame*
+                        cp $WAR_FILE $DEPLOY_DIR/
+                        $DEPLOY_DIR/../bin/shutdown.sh || true
+                        $DEPLOY_DIR/../bin/startup.sh
+                    '''
+                }
             }
         }
     }
 
     post {
         success {
-            echo '✅ Build and deployment successful!'
+            echo "✅ Build and deployment successful!"
         }
         failure {
-            echo '❌ Build or deployment failed. Check logs.'
+            echo "❌ Build or deployment failed. Check logs."
         }
     }
 }
