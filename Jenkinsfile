@@ -25,9 +25,10 @@ pipeline {
 
         stage('Deploy to Tomcat') {
             steps {
-                sh '''
-                    sudo rm -rf $DEPLOY_DIR/NumberGuessGame*
-                    cp target/NumberGuessGame.war $DEPLOY_DIR/
+                script {
+                   sh '''
+                    rm -rf $DEPLOY_DIR/NumberGuessGame*
+                    cp $WAR_FILE $DEPLOY_DIR/
                 '''
             }
         }
