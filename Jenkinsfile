@@ -27,7 +27,7 @@ pipeline {
             steps {
                 sh '''
                     sudo rm -rf $DEPLOY_DIR/NumberGuessGame*
-                    sudo cp target/NumberGuessGame.war $DEPLOY_DIR/
+                    cp target/NumberGuessGame.war $DEPLOY_DIR/
                 '''
             }
         }
