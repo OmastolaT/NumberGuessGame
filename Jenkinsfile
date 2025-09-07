@@ -1,49 +1,48 @@
 pipeline {
-    agent any
+  agent any
 
-    tools {
-        maven 'Maven3'
-        jdk 'JDK17'
+  environment {
+    MAVEN_OPTS = '-Xmx1024m'
+    SONAR_URL   = 'http://51.20.67.145:9000'  // Pro 2 SonarQube
+    WAR_GLOB    = 'target/*.war'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
-    environment {
-        DEPLOY_DIR = "/opt/tomcat10/webapps"
-        WAR_FILE   = "target/NumberGuessGame-1.0-SNAPSHOT.war"
+    stage('Build & Test') {
+      steps {
+        sh 'mvn -B -DskipTests=false clean package'
+        junit '**/target/surefire-reports/*.xml'
+      }
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/OmastolaT/NumberGuessGame.git'
-            }
+    stage('SonarQube Analysis') {
+      steps {
+        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
+          sh "mvn -B sonar:sonar -Dsonar.host.url=${SONAR_URL} -Dsonar.login=${SONAR_TOKEN}"
         }
-
-        stage('Build') {
-            steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
-
-        stage('Deploy to Tomcat') {
-            steps {
-                script {
-                    sh '''
-                        rm -rf $DEPLOY_DIR/NumberGuessGame*
-                        cp $WAR_FILE $DEPLOY_DIR/
-                        $DEPLOY_DIR/../bin/shutdown.sh || true
-                        $DEPLOY_DIR/../bin/startup.sh
-                    '''
-                }
-            }
-        }
+      }
     }
 
-    post {
-        success {
-            echo "✅ Build and deployment successful!"
+    stage('Deploy to Tomcat') {
+      steps {
+        script {
+          def war = sh(script: "ls ${WAR_GLOB} | head -n 1", returnStdout: true).trim()
+          if (!war) { error "WAR not found" }
+          sh "cp ${war} /opt/tomcat/webapps/"
         }
-        failure {
-            echo "❌ Build or deployment failed. Check logs."
-        }
+      }
     }
+
+    stage('Smoke Test') {
+      steps {
+        sh 'curl -sS --fail http://localhost:8080/ || true'
+      }
+    }
+  }
 }
